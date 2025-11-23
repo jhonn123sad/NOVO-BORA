@@ -89,6 +89,16 @@ const App: React.FC = () => {
     }
   };
 
+  const RULES = [
+    "Horário pra acordar 4:30 TODOS OS DIAS",
+    "Não desperdiçar tempo",
+    "Fazer dinheiro",
+    "SERVIR",
+    "OUSADIA MÁXIMA",
+    "Subir o grau de PNL e anti frágil TODOS OS DIAS",
+    "Confie em Deus"
+  ];
+
   return (
     <div className="min-h-screen bg-[#020617] text-slate-200 pb-16 font-sans selection:bg-indigo-500/30">
       <Header 
@@ -97,8 +107,34 @@ const App: React.FC = () => {
       />
 
       <main className="max-w-6xl mx-auto px-4 pt-8 animate-in fade-in duration-700 slide-in-from-bottom-4">
+        
+        {/* Seção de Regras Inegociáveis */}
+        <div className="mb-8 relative overflow-hidden rounded-2xl bg-gradient-to-br from-rose-950/30 to-slate-900/80 border border-rose-500/20 p-6 shadow-2xl backdrop-blur-md">
+          {/* Efeito de brilho de fundo */}
+          <div className="absolute top-0 right-0 -mt-10 -mr-10 w-40 h-40 bg-rose-600/10 rounded-full blur-3xl pointer-events-none"></div>
+          
+          <h2 className="relative flex items-center justify-center gap-4 text-xl md:text-2xl font-black text-rose-100 tracking-[0.2em] uppercase mb-8 text-center drop-shadow-sm">
+            <span className="hidden md:block w-12 h-[1px] bg-gradient-to-r from-transparent to-rose-500/50"></span>
+            Regras Inegociáveis
+            <span className="hidden md:block w-12 h-[1px] bg-gradient-to-l from-transparent to-rose-500/50"></span>
+          </h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4 max-w-5xl mx-auto">
+            {RULES.map((rule, index) => (
+              <div key={index} className="flex items-start gap-3 group">
+                <span className="font-mono text-rose-500 font-bold text-lg leading-tight opacity-80 group-hover:opacity-100 transition-opacity">
+                  {String(index + 1).padStart(2, '0')}.
+                </span>
+                <p className="text-sm md:text-base font-bold text-slate-300 uppercase tracking-wide leading-tight group-hover:text-white transition-colors">
+                  {rule}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+
         {isLoading ? (
-          <div className="flex justify-center items-center h-[50vh]">
+          <div className="flex justify-center items-center h-[30vh]">
             <div className="relative">
               <div className="w-12 h-12 rounded-full absolute border-4 border-solid border-gray-200"></div>
               <div className="w-12 h-12 rounded-full animate-spin absolute border-4 border-solid border-indigo-500 border-t-transparent"></div>
