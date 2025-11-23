@@ -20,3 +20,10 @@ export interface ChartDataPoint {
   date: string;
   points: number;
 }
+
+export interface Dream {
+  id: number | string;
+  label: string;
+  image_url: string;
+  is_default?: boolean;
+}
