@@ -2,7 +2,7 @@ import { TaskDefinition } from './types';
 
 export const TASKS: TaskDefinition[] = [
   // Morning
-  { id: 'm_vacuum', label: 'Aspirar a casa', period: 'Morning' },
+  { id: 'm_vacuum', label: 'Vacum', period: 'Morning' },
   { id: 'm_run', label: 'Correr', period: 'Morning' },
   { id: 'm_minoxidil_1', label: 'Minoxidil (1ª dose)', period: 'Morning' },
   { id: 'm_read', label: 'Ler', period: 'Morning' },
@@ -10,13 +10,13 @@ export const TASKS: TaskDefinition[] = [
   { id: 'm_tidy', label: 'Organizar ambiente', period: 'Morning' },
 
   // Afternoon
-  { id: 'a_prospect', label: 'Prospecção (sem parar)', period: 'Afternoon' },
+  { id: 'a_prospect', label: 'Prospectar 100', period: 'Afternoon' },
   { id: 'a_post_videos', label: 'Postar três vídeos', period: 'Afternoon' },
   { id: 'a_minoxidil_2', label: 'Minoxidil (2ª dose)', period: 'Afternoon' },
   { id: 'a_last_meal', label: 'Última refeição', period: 'Afternoon' },
 
   // Night
-  { id: 'n_cryo', label: 'Crioterapia', period: 'Night' },
+  { id: 'n_cryo', label: 'Óleo de Rícino', period: 'Night' },
   { id: 'n_gym', label: 'Academia', period: 'Night' },
   { id: 'n_write', label: 'Escrever diário', period: 'Night' },
 ];
