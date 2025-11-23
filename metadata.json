@@ -1,0 +1,5 @@
+{
+  "name": "Desafio 30 Dias",
+  "description": "Um rastreador de hábitos diários disciplinado com persistência no Supabase, estética dark mode e atualizações em tempo real.",
+  "requestFramePermissions": []
+}
