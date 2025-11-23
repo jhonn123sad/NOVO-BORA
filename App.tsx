@@ -1,13 +1,13 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Header from './components/Header';
 import TaskCard from './components/TaskCard';
 import Stats from './components/Stats';
 import { TASKS } from './constants';
 import { TaskMap, ChartDataPoint, Dream } from './types';
-import { fetchDayLog, saveDayLog, fetchHistory, getPointsFromTasks, fetchDreams, createDream, deleteDream, uploadDreamImage } from './services/api';
+import { fetchDayLog, saveDayLog, fetchHistory, getPointsFromTasks } from './services/api';
 import { getLocalDate } from './services/utils';
 import { supabase } from './services/supabase';
-import { X, ChevronLeft, ChevronRight, Zap, Settings, Trash2, Plus, Upload, Loader2, Save } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Zap } from 'lucide-react';
 
 const PROJECT_URL = 'https://oaflhpwhrdaaqjvmdvyl.supabase.co';
 const STORAGE_PATH = `${PROJECT_URL}/storage/v1/object/public/dream-assets`;
@@ -71,18 +71,11 @@ const App: React.FC = () => {
   const [history, setHistory] = useState<ChartDataPoint[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   
-  // Dreams State
-  const [dreams, setDreams] = useState<Dream[]>(DEFAULT_DREAMS);
+  // Dreams State - Fixed to defaults only
+  const [dreams] = useState<Dream[]>(DEFAULT_DREAMS);
   const [showDreams, setShowDreams] = useState(false);
   const [currentDreamIndex, setCurrentDreamIndex] = useState(0);
-  const [isEditMode, setIsEditMode] = useState(false);
   
-  // New Dream Form State
-  const [newDreamLabel, setNewDreamLabel] = useState('');
-  const [newDreamFile, setNewDreamFile] = useState<File | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
   const currentPoints = getPointsFromTasks(tasks);
 
   const morningTasks = TASKS.filter(t => t.period === 'Morning');
@@ -98,19 +91,8 @@ const App: React.FC = () => {
       
       const historyData = await fetchHistory();
       setHistory(historyData);
-      
-      // Load dreams from Supabase
-      const dbDreams = await fetchDreams();
-      if (dbDreams && dbDreams.length > 0) {
-        setDreams(dbDreams);
-      } else {
-        // Fallback to the user's manual uploads if DB is empty
-        setDreams(DEFAULT_DREAMS);
-      }
     } catch (err) {
       console.error(err);
-      // Ensure defaults load on error
-      setDreams(DEFAULT_DREAMS);
     } finally {
       setIsLoading(false);
     }
@@ -122,9 +104,6 @@ const App: React.FC = () => {
 
   // Preload images mechanism
   useEffect(() => {
-    // This creates an invisible Image object for each dream URL, 
-    // forcing the browser to cache them immediately.
-    // When the user opens the modal, the image is served from disk cache instantly.
     if (dreams.length > 0) {
       dreams.forEach((dream) => {
         const img = new Image();
@@ -181,64 +160,6 @@ const App: React.FC = () => {
   const prevDream = (e?: React.MouseEvent) => {
     e?.stopPropagation();
     setCurrentDreamIndex((prev) => (prev - 1 + dreams.length) % dreams.length);
-  };
-
-  // Dream Management
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setNewDreamFile(e.target.files[0]);
-    }
-  };
-
-  const handleUploadDream = async () => {
-    if (!newDreamFile || !newDreamLabel) return;
-    
-    setIsUploading(true);
-    try {
-      // 1. Upload Image
-      const publicUrl = await uploadDreamImage(newDreamFile);
-      
-      // 2. Save to DB
-      const newDream = await createDream(newDreamLabel, publicUrl);
-      
-      // 3. Update Local State
-      // If we were viewing defaults, replace with new DB item, otherwise append
-      const isViewingDefaults = dreams.every(d => d.is_default);
-      const updatedDreams = isViewingDefaults ? [newDream] : [...dreams, newDream];
-      
-      setDreams(updatedDreams);
-      
-      // Reset Form
-      setNewDreamFile(null);
-      setNewDreamLabel('');
-      setIsEditMode(false); // Go back to view
-      setCurrentDreamIndex(updatedDreams.length - 1); // Go to new dream
-    } catch (error: any) {
-      console.error('Error uploading dream:', error);
-      alert(`Erro ao salvar: ${error.message || 'Verifique se criou o bucket e a tabela no Supabase.'}`);
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
-  const handleDeleteDream = async (id: string | number) => {
-    if (!confirm('Tem certeza que deseja apagar este sonho?')) return;
-    
-    try {
-      await deleteDream(id);
-      const updated = dreams.filter(d => d.id !== id);
-      if (updated.length === 0) {
-        setDreams(DEFAULT_DREAMS);
-      } else {
-        setDreams(updated);
-        if (currentDreamIndex >= updated.length) {
-          setCurrentDreamIndex(0);
-        }
-      }
-    } catch (error) {
-      console.error('Error deleting:', error);
-      alert('Erro ao deletar.');
-    }
   };
 
   const RULES = [
@@ -341,16 +262,6 @@ const App: React.FC = () => {
         >
           {/* Top Controls */}
           <div className="absolute top-6 right-6 z-50 flex items-center gap-3">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsEditMode(!isEditMode);
-              }}
-              className={`p-2 rounded-full transition-colors ${isEditMode ? 'bg-yellow-500 text-black' : 'bg-white/10 hover:bg-white/20 text-white'}`}
-              title="Gerenciar Sonhos"
-            >
-              <Settings className="w-6 h-6" />
-            </button>
             <button 
               onClick={() => setShowDreams(false)}
               className="p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
@@ -363,155 +274,73 @@ const App: React.FC = () => {
             className="relative w-full max-w-6xl h-full max-h-[90vh] flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
-            {isEditMode ? (
-              /* --- EDIT MODE --- */
-              <div className="w-full h-full flex flex-col gap-6 overflow-y-auto p-4 md:p-8 bg-slate-900/50 rounded-2xl border border-slate-700/50">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-2xl font-bold text-white">Gerenciar Sonhos</h2>
-                  <div className="text-sm text-slate-400">Total: {dreams.length}</div>
-                </div>
-
-                {/* Add New Form */}
-                <div className="bg-slate-800/50 p-6 rounded-xl border border-dashed border-slate-600 hover:border-indigo-500 transition-colors">
-                   <h3 className="text-lg font-semibold text-indigo-400 mb-4 flex items-center gap-2">
-                     <Plus className="w-5 h-5" /> Adicionar Novo Sonho
-                   </h3>
-                   <div className="flex flex-col md:flex-row gap-4">
-                      <div 
-                        className="flex-1 h-32 bg-slate-900/50 rounded-lg border border-slate-700 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-800/50 transition-colors relative overflow-hidden"
-                        onClick={() => fileInputRef.current?.click()}
-                      >
-                        {newDreamFile ? (
-                          <div className="absolute inset-0 flex items-center justify-center bg-slate-800">
-                             <span className="text-indigo-400 font-medium truncate px-4">{newDreamFile.name}</span>
-                          </div>
-                        ) : (
-                          <>
-                            <Upload className="w-8 h-8 text-slate-500 mb-2" />
-                            <span className="text-sm text-slate-500">Clique para selecionar imagem</span>
-                          </>
-                        )}
-                        <input 
-                          type="file" 
-                          ref={fileInputRef}
-                          className="hidden" 
-                          accept="image/*"
-                          onChange={handleFileSelect}
-                        />
-                      </div>
-                      
-                      <div className="flex-1 flex flex-col gap-3">
-                        <input 
-                          type="text" 
-                          placeholder="Título do sonho (ex: Minha Ferrari)"
-                          className="w-full p-3 bg-slate-900 rounded-lg border border-slate-700 text-white focus:border-indigo-500 focus:outline-none"
-                          value={newDreamLabel}
-                          onChange={(e) => setNewDreamLabel(e.target.value)}
-                        />
-                        <button 
-                          onClick={handleUploadDream}
-                          disabled={!newDreamFile || !newDreamLabel || isUploading}
-                          className="w-full mt-auto py-3 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700 disabled:cursor-not-allowed text-white font-bold rounded-lg transition-colors flex items-center justify-center gap-2"
-                        >
-                          {isUploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-                          Salvar no Banco
-                        </button>
-                      </div>
-                   </div>
-                </div>
-
-                {/* List Existing */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {dreams.map((dream) => (
-                    <div key={dream.id} className="group relative aspect-video bg-slate-800 rounded-lg overflow-hidden border border-slate-700">
-                      <img src={dream.image_url} alt={dream.label} className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity" />
-                      <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/90 to-transparent">
-                        <p className="text-white font-medium truncate">{dream.label}</p>
-                      </div>
-                      {!dream.is_default && (
-                        <button 
-                          onClick={() => handleDeleteDream(dream.id)}
-                          className="absolute top-2 right-2 p-2 bg-red-500/80 hover:bg-red-600 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-all"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              /* --- VIEW MODE (CAROUSEL) --- */
-              <>
-                <div className="relative w-full flex-1 flex items-center justify-center overflow-hidden rounded-2xl group border border-white/5 bg-slate-900/50">
-                  <div className="relative w-full h-full flex items-center justify-center p-2 md:p-6">
-                    {dreams.length > 0 && (
-                      <img
-                        key={dreams[currentDreamIndex].id} 
-                        src={dreams[currentDreamIndex].image_url}
-                        alt={dreams[currentDreamIndex].label}
-                        className="relative z-10 w-auto h-auto max-w-full max-h-full object-contain shadow-2xl drop-shadow-[0_10px_40px_rgba(0,0,0,0.5)] rounded-lg animate-in zoom-in duration-300"
-                        loading="eager"
-                        // @ts-ignore
-                        fetchPriority="high"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          if (target.src.includes('placehold.co')) return;
-                          target.src = 'https://placehold.co/800x600/1e293b/FFF?text=Erro+na+Imagem';
-                        }}
-                      />
-                    )}
-                  </div>
-                  
-                  {/* Controls Overlay */}
-                  <div className="absolute inset-0 z-20 flex items-center justify-between p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
-                    <button 
-                      onClick={prevDream}
-                      className="pointer-events-auto p-3 rounded-full bg-black/50 hover:bg-black/70 text-white backdrop-blur-sm transition-all hover:scale-110"
-                    >
-                      <ChevronLeft className="w-8 h-8" />
-                    </button>
-                    <button 
-                      onClick={nextDream}
-                      className="pointer-events-auto p-3 rounded-full bg-black/50 hover:bg-black/70 text-white backdrop-blur-sm transition-all hover:scale-110"
-                    >
-                      <ChevronRight className="w-8 h-8" />
-                    </button>
-                  </div>
-
-                  {/* Mobile Tap Areas */}
-                  <div className="absolute inset-y-0 left-0 w-1/4 z-30 md:hidden" onClick={prevDream}></div>
-                  <div className="absolute inset-y-0 right-0 w-1/4 z-30 md:hidden" onClick={nextDream}></div>
-                </div>
-
-                {/* Caption */}
+            <div className="relative w-full flex-1 flex items-center justify-center overflow-hidden rounded-2xl group border border-white/5 bg-slate-900/50">
+              <div className="relative w-full h-full flex items-center justify-center p-2 md:p-6">
                 {dreams.length > 0 && (
-                  <div key={currentDreamIndex} className="mt-8 text-center animate-in slide-in-from-bottom-4 duration-500">
-                    <div className="inline-block px-3 py-1 mb-3 rounded-full border border-yellow-500/30 bg-yellow-500/10 text-yellow-400 text-xs font-mono tracking-widest uppercase">
-                      Visão {currentDreamIndex + 1} / {dreams.length}
-                    </div>
-                    <h3 className="text-2xl md:text-4xl font-black text-white uppercase tracking-wider drop-shadow-lg max-w-3xl mx-auto leading-tight">
-                      {dreams[currentDreamIndex].label}
-                    </h3>
-                  </div>
+                  <img
+                    key={dreams[currentDreamIndex].id} 
+                    src={dreams[currentDreamIndex].image_url}
+                    alt={dreams[currentDreamIndex].label}
+                    className="relative z-10 w-auto h-auto max-w-full max-h-full object-contain shadow-2xl drop-shadow-[0_10px_40px_rgba(0,0,0,0.5)] rounded-lg animate-in zoom-in duration-300"
+                    loading="eager"
+                    // @ts-ignore
+                    fetchPriority="high"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      if (target.src.includes('placehold.co')) return;
+                      target.src = 'https://placehold.co/800x600/1e293b/FFF?text=Erro+na+Imagem';
+                    }}
+                  />
                 )}
-                
-                {/* Thumbnails Indicator */}
-                <div className="flex gap-2 mt-6 overflow-x-auto max-w-full pb-2 px-4 justify-center">
-                  {dreams.map((dream, idx) => (
-                    <button
-                      key={dream.id}
-                      onClick={() => setCurrentDreamIndex(idx)}
-                      className={`h-1.5 rounded-full transition-all duration-300 ${
-                        idx === currentDreamIndex 
-                          ? 'w-8 bg-yellow-400 shadow-[0_0_10px_rgba(250,204,21,0.5)]' 
-                          : 'w-2 bg-slate-700 hover:bg-slate-600'
-                      }`}
-                    />
-                  ))}
+              </div>
+              
+              {/* Controls Overlay */}
+              <div className="absolute inset-0 z-20 flex items-center justify-between p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+                <button 
+                  onClick={prevDream}
+                  className="pointer-events-auto p-3 rounded-full bg-black/50 hover:bg-black/70 text-white backdrop-blur-sm transition-all hover:scale-110"
+                >
+                  <ChevronLeft className="w-8 h-8" />
+                </button>
+                <button 
+                  onClick={nextDream}
+                  className="pointer-events-auto p-3 rounded-full bg-black/50 hover:bg-black/70 text-white backdrop-blur-sm transition-all hover:scale-110"
+                >
+                  <ChevronRight className="w-8 h-8" />
+                </button>
+              </div>
+
+              {/* Mobile Tap Areas */}
+              <div className="absolute inset-y-0 left-0 w-1/4 z-30 md:hidden" onClick={prevDream}></div>
+              <div className="absolute inset-y-0 right-0 w-1/4 z-30 md:hidden" onClick={nextDream}></div>
+            </div>
+
+            {/* Caption */}
+            {dreams.length > 0 && (
+              <div key={currentDreamIndex} className="mt-8 text-center animate-in slide-in-from-bottom-4 duration-500">
+                <div className="inline-block px-3 py-1 mb-3 rounded-full border border-yellow-500/30 bg-yellow-500/10 text-yellow-400 text-xs font-mono tracking-widest uppercase">
+                  Visão {currentDreamIndex + 1} / {dreams.length}
                 </div>
-              </>
+                <h3 className="text-2xl md:text-4xl font-black text-white uppercase tracking-wider drop-shadow-lg max-w-3xl mx-auto leading-tight">
+                  {dreams[currentDreamIndex].label}
+                </h3>
+              </div>
             )}
+            
+            {/* Thumbnails Indicator */}
+            <div className="flex gap-2 mt-6 overflow-x-auto max-w-full pb-2 px-4 justify-center">
+              {dreams.map((dream, idx) => (
+                <button
+                  key={dream.id}
+                  onClick={() => setCurrentDreamIndex(idx)}
+                  className={`h-1.5 rounded-full transition-all duration-300 ${
+                    idx === currentDreamIndex 
+                      ? 'w-8 bg-yellow-400 shadow-[0_0_10px_rgba(250,204,21,0.5)]' 
+                      : 'w-2 bg-slate-700 hover:bg-slate-600'
+                  }`}
+                />
+              ))}
+            </div>
           </div>
         </div>
       )}
