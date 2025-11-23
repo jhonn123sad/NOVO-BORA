@@ -56,7 +56,7 @@ const TaskCard: React.FC<TaskCardProps> = ({ period, tasks, statusMap, onToggle 
                   onChange={() => onToggle(task.id)}
                   className={`
                     appearance-none w-6 h-6 border-2 rounded-lg
-                    bg-slate-950/50 checked:bg-current transition-all duration-300 ease-out
+                    bg-slate-950/50 transition-all duration-300 ease-out
                     focus:ring-0 focus:ring-offset-0 cursor-pointer
                     ${isChecked ? styles.checkbox : 'border-slate-600 hover:border-slate-500'}
                     ${styles.checkboxBorder}

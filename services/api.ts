@@ -11,25 +11,31 @@ export const getPointsFromTasks = (tasks: TaskMap): number => {
 };
 
 export const fetchDayLog = async (date: string): Promise<DailyLog> => {
+  // Use select without single() to handle potential duplicates
+  // Order by created_at descending so we get the most recent entry if duplicates exist
   const { data, error } = await supabase
     .from('daily_logs')
     .select('*')
     .eq('date', date)
-    .single();
+    .order('created_at', { ascending: false });
 
-  if (error && error.code !== 'PGRST116') {
+  if (error) {
     console.error('Error fetching day:', error);
+    // Return default empty structure on error
+    return { date, tasks: {}, points: 0 };
   }
 
-  // Return existing data or default empty structure
-  if (data) {
+  // If we found data, use the first record (which is the newest due to sorting)
+  if (data && data.length > 0) {
+    const record = data[0];
     return {
-      date: data.date,
-      tasks: data.tasks || {},
-      points: data.points || 0,
+      date: record.date,
+      tasks: record.tasks || {},
+      points: record.points || 0,
     };
   }
 
+  // No data found for this date
   return {
     date,
     tasks: {},
